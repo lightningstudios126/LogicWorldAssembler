@@ -1,5 +1,3 @@
-using System;
-
 namespace LogicWorldAssembler {
     public enum OperandType {
         REGISTER,
@@ -76,7 +74,7 @@ namespace LogicWorldAssembler {
         CP
     }
 
-    public enum Register {
+    public enum Register : byte {
         A = 0,
         B,
         C,
@@ -88,30 +86,106 @@ namespace LogicWorldAssembler {
     }
 
     public static class MnemonicExtensions {
-        public static (OperandType?, OperandType?) Operands(this Mnemonic m) {
-            return m switch {
-                Mnemonic.NOP or Mnemonic.HLT => (null, null),
-                Mnemonic.MVI => (OperandType.REGISTER, OperandType.IMM_VALUE),
-                Mnemonic.LDR or Mnemonic.STR => (OperandType.REGISTER, OperandType.ADDRESS),
-                Mnemonic.PSH or Mnemonic.POP or Mnemonic.LDAX or Mnemonic.STAX => (OperandType.REGISTER, null),
-                Mnemonic.MOV => (OperandType.REGISTER, OperandType.REGISTER),
-                Mnemonic.ADD or Mnemonic.ADC or Mnemonic.SUB or Mnemonic.SBB => (OperandType.REGISTER, null),
-                Mnemonic.ANA or Mnemonic.XRA or Mnemonic.ORA or Mnemonic.CMP => (OperandType.REGISTER, null),
-                Mnemonic.INC or Mnemonic.DEC => (OperandType.REGISTER, null),
-                Mnemonic.ADI or Mnemonic.ACI or Mnemonic.SUI or Mnemonic.SBI => (OperandType.IMM_VALUE, null),
-                Mnemonic.ANI or Mnemonic.XRI or Mnemonic.ORI or Mnemonic.CPI => (OperandType.IMM_VALUE, null),
-                Mnemonic.SHL or Mnemonic.SHR or Mnemonic.RTL or Mnemonic.RTR
-                    or Mnemonic.NOT or Mnemonic.NEG => (null, null),
-                Mnemonic.JMP or Mnemonic.STSP or Mnemonic.CAL => (OperandType.ADDRESS, null),
-                Mnemonic.LDPC or Mnemonic.LDSP or Mnemonic.RET or Mnemonic.PSSW or Mnemonic.POSW => (null, null),
-                Mnemonic.JC or Mnemonic.JNC or Mnemonic.JZ or Mnemonic.JNZ or
-                    Mnemonic.JO or Mnemonic.JNO or Mnemonic.JM or Mnemonic.JP => (OperandType.ADDRESS, null),
-                Mnemonic.RC or Mnemonic.RNC or Mnemonic.RZ or Mnemonic.RNZ or
-                    Mnemonic.RO or Mnemonic.RNO or Mnemonic.RM or Mnemonic.RP => (null, null),
-                Mnemonic.CC or Mnemonic.CNC or Mnemonic.CZ or Mnemonic.CNZ or
-                    Mnemonic.CO or Mnemonic.CNO or Mnemonic.CM or Mnemonic.CP => (OperandType.ADDRESS, null),
-                _ => throw new ArgumentOutOfRangeException(nameof(m), $"Unexpected mnemonic value: {m}")
-            };
-        }
+        public static (OperandType?, OperandType?) Operands(this Mnemonic m) => m switch {
+            Mnemonic.NOP or Mnemonic.HLT => (null, null),
+            Mnemonic.MVI => (OperandType.REGISTER, OperandType.IMM_VALUE),
+            Mnemonic.LDR or Mnemonic.STR => (OperandType.REGISTER, OperandType.ADDRESS),
+            Mnemonic.PSH or Mnemonic.POP or Mnemonic.LDAX or Mnemonic.STAX => (OperandType.REGISTER, null),
+            Mnemonic.MOV => (OperandType.REGISTER, OperandType.REGISTER),
+            Mnemonic.ADD or Mnemonic.ADC or Mnemonic.SUB or Mnemonic.SBB => (OperandType.REGISTER, null),
+            Mnemonic.ANA or Mnemonic.XRA or Mnemonic.ORA or Mnemonic.CMP => (OperandType.REGISTER, null),
+            Mnemonic.INC or Mnemonic.DEC => (OperandType.REGISTER, null),
+            Mnemonic.ADI or Mnemonic.ACI or Mnemonic.SUI or Mnemonic.SBI => (OperandType.IMM_VALUE, null),
+            Mnemonic.ANI or Mnemonic.XRI or Mnemonic.ORI or Mnemonic.CPI => (OperandType.IMM_VALUE, null),
+            Mnemonic.SHL or Mnemonic.SHR or Mnemonic.RTL or Mnemonic.RTR
+                or Mnemonic.NOT or Mnemonic.NEG => (null, null),
+            Mnemonic.JMP or Mnemonic.STSP or Mnemonic.CAL => (OperandType.ADDRESS, null),
+            Mnemonic.LDPC or Mnemonic.LDSP or Mnemonic.RET or Mnemonic.PSSW or Mnemonic.POSW => (null, null),
+            Mnemonic.JC or Mnemonic.JNC or Mnemonic.JZ or Mnemonic.JNZ or
+                Mnemonic.JO or Mnemonic.JNO or Mnemonic.JM or Mnemonic.JP => (OperandType.ADDRESS, null),
+            Mnemonic.RC or Mnemonic.RNC or Mnemonic.RZ or Mnemonic.RNZ or
+                Mnemonic.RO or Mnemonic.RNO or Mnemonic.RM or Mnemonic.RP => (null, null),
+            Mnemonic.CC or Mnemonic.CNC or Mnemonic.CZ or Mnemonic.CNZ or
+                Mnemonic.CO or Mnemonic.CNO or Mnemonic.CM or Mnemonic.CP => (OperandType.ADDRESS, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(m), $"Unexpected mnemonic value: {m}")
+        };
+
+        public static int Bytes(this Mnemonic m) => m.Operands() switch {
+            (OperandType.IMM_VALUE, null) or (OperandType.ADDRESS, null) => 2,
+            (OperandType.REGISTER, OperandType.IMM_VALUE) or (OperandType.REGISTER, OperandType.ADDRESS) => 2,
+            (OperandType.REGISTER, _) => 1,
+            (null, null) => 1,
+            _ => throw new ArgumentOutOfRangeException(nameof(m), $"Unsupported operand pattern: {m.Operands()}")
+        };
+
+        public static byte Opcode(this Mnemonic m) => m switch {
+            Mnemonic.NOP => 0x00,
+            Mnemonic.HLT => 0x07,
+            Mnemonic.MVI => 0x08,
+            Mnemonic.PSH => 0x10,
+            Mnemonic.POP => 0x18,
+            Mnemonic.LDR => 0x20,
+            Mnemonic.STR => 0x28,
+            Mnemonic.LDAX => 0x30,
+            Mnemonic.STAX => 0x38,
+            Mnemonic.MOV => 0x40,
+            Mnemonic.ADD => 0x80,
+            Mnemonic.ADC => 0x88,
+            Mnemonic.SUB => 0x90,
+            Mnemonic.SBB => 0x98,
+            Mnemonic.ANA => 0xA0,
+            Mnemonic.XRA => 0xA8,
+            Mnemonic.ORA => 0xB0,
+            Mnemonic.CMP => 0xB8,
+            Mnemonic.INC => 0xC0,
+            Mnemonic.DEC => 0xC8,
+            Mnemonic.ADI => 0xD0,
+            Mnemonic.ACI => 0xD1,
+            Mnemonic.SUI => 0xD2,
+            Mnemonic.SBI => 0xD3,
+            Mnemonic.ANI => 0xD4,
+            Mnemonic.XRI => 0xD5,
+            Mnemonic.ORI => 0xD6,
+            Mnemonic.CPI => 0xD7,
+            Mnemonic.SHL => 0xD8,
+            Mnemonic.SHR => 0xD9,
+            Mnemonic.RTL => 0xDA,
+            Mnemonic.RTR => 0xDB,
+            Mnemonic.NOT => 0xDC,
+            Mnemonic.NEG => 0xDD,
+            Mnemonic.JMP => 0xE0,
+            Mnemonic.STSP => 0xE1,
+            Mnemonic.LDPC => 0xE2,
+            Mnemonic.LDSP => 0xE3,
+            Mnemonic.RET => 0xE4,
+            Mnemonic.CAL => 0xE5,
+            Mnemonic.PSSW => 0xE6,
+            Mnemonic.POSW => 0xE7,
+            Mnemonic.JC => 0xE8,
+            Mnemonic.JNC => 0xE9,
+            Mnemonic.JZ => 0xEA,
+            Mnemonic.JNZ => 0xEB,
+            Mnemonic.JO => 0xEC,
+            Mnemonic.JNO => 0xED,
+            Mnemonic.JM => 0xEE,
+            Mnemonic.JP => 0xEF,
+            Mnemonic.RC => 0xF0,
+            Mnemonic.RNC => 0xF1,
+            Mnemonic.RZ => 0xF2,
+            Mnemonic.RNZ => 0xF3,
+            Mnemonic.RO => 0xF4,
+            Mnemonic.RNO => 0xF5,
+            Mnemonic.RM => 0xF6,
+            Mnemonic.RP => 0xF7,
+            Mnemonic.CC => 0xF8,
+            Mnemonic.CNC => 0xF9,
+            Mnemonic.CZ => 0xFA,
+            Mnemonic.CNZ => 0xFB,
+            Mnemonic.CO => 0xFC,
+            Mnemonic.CNO => 0xFD,
+            Mnemonic.CM => 0xFE,
+            Mnemonic.CP => 0xFF,
+            _ => throw new ArgumentOutOfRangeException(nameof(m), m, null)
+        };
     }
 }

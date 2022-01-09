@@ -1,13 +1,28 @@
 ﻿namespace LogicWorldAssembler {
     public abstract record Operand {
-        public record RegisterOperand(Register register) : Operand;
+        public sealed override string ToString() => this switch {
+            RegisterOperand registerOperand => registerOperand.Register.ToString(),
+            ImmediateValueOperand immediateValueOperand => "0x" + immediateValueOperand.Value.ToString("X2"),
+            AddressOperand.ImmediateAddressOperand immediateAddressOperand =>
+                immediateAddressOperand.Value.ToString("X2"),
+            AddressOperand.LabelOperand labelOperand => labelOperand.Label.ToString(),
+            _ => throw new ArgumentOutOfRangeException()
+        };
 
-        public record ImmediateValueOperand(byte value) : Operand;
+        public record RegisterOperand(Register Register) : Operand;
 
-        public abstract record AddressOperand(byte? address) : Operand {
-            public record ImmediateAddressOperand(byte value) : AddressOperand(value);
+        public record ImmediateValueOperand(byte Value) : Operand;
 
-            public record LabelOperand(Label label) : AddressOperand((byte?) label.Address);
+        public abstract record AddressOperand : Operand {
+            public abstract int Address { get; }
+
+            public record ImmediateAddressOperand(byte Value) : AddressOperand {
+                public override int Address => Value;
+            }
+
+            public record LabelOperand(Label Label) : AddressOperand() {
+                public override int Address => Label.Instruction!.Value.Address;
+            }
         }
     }
 }

@@ -1,11 +1,14 @@
 ﻿namespace LogicWorldAssembler {
     public class Label {
-        public Label(string labelName, int? address) {
+        public Label(string labelName) {
             LabelName = labelName;
-            Address = address;
         }
 
         public string LabelName { get; }
-        public int? Address { get; set; }
+        public Instruction? Instruction { get; set; }
+
+        public override string ToString() {
+            return $"{LabelName} ({Instruction?.Address.ToString("X2") ?? "?"})";
+        }
     }
 }
